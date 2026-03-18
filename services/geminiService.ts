@@ -2,7 +2,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { ProposalInput } from "../types";
 
 // Helper to initialize AI
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => {
+  const customKey = typeof window !== 'undefined' ? localStorage.getItem('custom_gemini_api_key') : null;
+  const apiKey = customKey || process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key가 설정되지 않았습니다. 상단에서 API Key를 입력해주세요.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const generateProposalText = async (input: ProposalInput): Promise<string> => {
   const ai = getAI();

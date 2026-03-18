@@ -3,6 +3,7 @@ import Header from './components/Header';
 import InputForm from './components/InputForm';
 import ProgressVisualizer from './components/ProgressVisualizer';
 import Preview from './components/Preview';
+import HeroBanner from './components/HeroBanner';
 import { ProposalInput, ProposalStep, GeneratedContent } from './types';
 import { generateProposalText, generateInfographicPrompts, generateImage } from './services/geminiService';
 import { createAndDownloadDocx } from './services/docxService';
@@ -95,7 +96,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 bg-slate-50 flex flex-col items-center">
+    <div className="min-h-screen pt-32 sm:pt-24 pb-12 bg-slate-50 flex flex-col items-center">
       <Header />
       
       <main className="w-full max-w-5xl px-4 sm:px-6 lg:px-8 space-y-10">
@@ -103,6 +104,7 @@ const App: React.FC = () => {
         {/* State: Idle or Input */}
         {currentStep === ProposalStep.IDLE && (
           <div className="animate-fade-in-up">
+            <HeroBanner />
             <div className="text-center mb-10">
                <h2 className="text-4xl font-extrabold text-slate-900 mb-4">
                  당신의 비즈니스를 위한 <span className="text-indigo-600">완벽한 제안서</span>
