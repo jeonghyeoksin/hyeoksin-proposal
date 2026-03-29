@@ -4,6 +4,7 @@ import InputForm from './components/InputForm';
 import ProgressVisualizer from './components/ProgressVisualizer';
 import Preview from './components/Preview';
 import HeroBanner from './components/HeroBanner';
+import FloatingButtons from './components/FloatingButtons';
 import { ProposalInput, ProposalStep, GeneratedContent } from './types';
 import { generateProposalText, generateInfographicPrompts, generateImage } from './services/geminiService';
 import { createAndDownloadDocx } from './services/docxService';
@@ -36,8 +37,7 @@ const App: React.FC = () => {
       // 2. Generate Infographics
       setCurrentStep(ProposalStep.GENERATING_INFOGRAPHICS);
       const infographicPrompts = await generateInfographicPrompts(rawText);
-      const infographicDataList = [];
-
+      
       // Generate images in parallel or sequence
       const imagePromises = infographicPrompts.slice(0, 3).map(async (prompt, index) => {
           const b64 = await generateImage(prompt, false);
@@ -148,6 +148,8 @@ const App: React.FC = () => {
         )}
 
       </main>
+
+      <FloatingButtons />
     </div>
   );
 };

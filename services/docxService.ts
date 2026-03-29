@@ -37,7 +37,7 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
                     new ImageRun({
                         data: base64ToUint8Array(content.myCompanyLogoBase64),
                         transformation: { width: 150, height: 75 }, // Restrict logo size
-                    })
+                    } as any)
                 ],
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 400 }
@@ -51,7 +51,7 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
           new ImageRun({
             data: base64ToUint8Array(content.coverImageBase64),
             transformation: { width: 600, height: 800 },
-          }),
+          } as any),
         ],
         alignment: AlignmentType.CENTER,
       })
@@ -96,7 +96,7 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
                              new ImageRun({
                                  data: base64ToUint8Array(graphic.imageBase64),
                                  transformation: { width: 500, height: 281 }
-                             })
+                             } as any)
                          ],
                          alignment: AlignmentType.CENTER,
                          spacing: { before: 400, after: 400 }
@@ -248,7 +248,7 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
                 new ImageRun({
                     data: base64ToUint8Array(content.businessCardImageBase64),
                     transformation: { width: 400, height: 228 }
-                })
+                } as any)
             ],
             alignment: AlignmentType.CENTER,
             spacing: { before: 200, after: 200 }

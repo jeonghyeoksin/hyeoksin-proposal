@@ -3,11 +3,16 @@ import { ProposalInput } from "../types";
 
 // Helper to initialize AI
 const getAI = () => {
+  // 1. Check for custom key in localStorage (for deployed web environment)
   const customKey = typeof window !== 'undefined' ? localStorage.getItem('custom_gemini_api_key') : null;
-  const apiKey = customKey || process.env.API_KEY;
+  
+  // 2. Use custom key if available, otherwise fallback to environment key (which is updated by AI Studio's openSelectKey)
+  const apiKey = customKey || process.env.API_KEY || process.env.GEMINI_API_KEY;
+  
   if (!apiKey) {
-    throw new Error("API Key가 설정되지 않았습니다. 상단에서 API Key를 입력해주세요.");
+    throw new Error("API Key가 설정되지 않았습니다. 상단에서 API Key를 입력하거나 이미지 생성 권한 설정을 완료해주세요.");
   }
+  
   return new GoogleGenAI({ apiKey });
 };
 
@@ -125,8 +130,8 @@ export const generateInfographicPrompts = async (text: string): Promise<string[]
 
 export const generateImage = async (imagePrompt: string, isCover: boolean = false): Promise<string | null> => {
   const ai = getAI();
-  // Use pro model for better text rendering
-  const model = 'gemini-3-pro-image-preview'; 
+  // Use gemini-2.5-flash-image for better compatibility and fewer permission restrictions
+  const model = 'gemini-2.5-flash-image'; 
 
   const enhancedPrompt = isCover 
     ? `A professional business proposal cover image (vertical 3:4 aspect ratio). ${imagePrompt}. High quality, corporate aesthetic, photorealistic or high-end 3D render, minimal text, elegant design.`
