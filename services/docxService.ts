@@ -50,7 +50,7 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
         children: [
           new ImageRun({
             data: base64ToUint8Array(content.coverImageBase64),
-            transformation: { width: 600, height: 800 },
+            transformation: { width: 500, height: 667 }, // Safer size for A4
           } as any),
         ],
         alignment: AlignmentType.CENTER,
@@ -121,13 +121,15 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
       }
       // H3 (Sub-Sub Section)
       else if (tagName === 'h3') {
-         const colorMatch = el.getAttribute('style')?.match(/color:\s*#([0-9a-fA-F]{6})/);
+         const style = el.getAttribute('style') || "";
+         const colorMatch = style.match(/color:\s*#([0-9a-fA-F]{6})/);
          const color = colorMatch ? colorMatch[1] : "1e40af";
          result.push(
             new Paragraph({
                 text: el.textContent || "",
                 heading: HeadingLevel.HEADING_3,
                 spacing: { before: 300, after: 150 },
+                border: { left: { color: color, space: 10, style: "single", size: 24 } },
                 run: { color: color, bold: true, italics: false }
             })
          );
@@ -135,6 +137,9 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
       // Paragraphs and Lists
       else if (tagName === 'p' || tagName === 'div' || tagName === 'li') {
         const runs: TextRun[] = [];
+        const style = el.getAttribute('style') || "";
+        const bgColorMatch = style.match(/background-color:\s*#([0-9a-fA-F]{6})/);
+        const pBgColor = bgColorMatch ? bgColorMatch[1] : undefined;
         
         el.childNodes.forEach(child => {
             if (child.nodeType === Node.TEXT_NODE) {
@@ -142,14 +147,14 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
             } else if (child.nodeType === Node.ELEMENT_NODE) {
                 const childEl = child as HTMLElement;
                 const childTag = childEl.tagName.toLowerCase();
-                const style = childEl.getAttribute('style') || "";
+                const childStyle = childEl.getAttribute('style') || "";
                 
-                const color = style.match(/color:\s*#([0-9a-fA-F]{6})/)?.[1];
-                const bgColor = style.match(/background-color:\s*#([0-9a-fA-F]{6})/)?.[1];
+                const color = childStyle.match(/color:\s*#([0-9a-fA-F]{6})/)?.[1];
+                const bgColor = childStyle.match(/background-color:\s*#([0-9a-fA-F]{6})/)?.[1];
                 
                 runs.push(new TextRun({
                     text: childEl.textContent || "",
-                    bold: childTag === 'strong' || childTag === 'b' || style.includes('font-weight: bold'),
+                    bold: childTag === 'strong' || childTag === 'b' || childStyle.includes('font-weight: bold'),
                     color: color,
                     shading: bgColor ? { type: ShadingType.CLEAR, fill: bgColor } : undefined,
                 }));
@@ -161,7 +166,8 @@ export const createAndDownloadDocx = async (content: GeneratedContent, fileName:
                 children: runs,
                 spacing: { line: 360, after: 200 },
                 alignment: AlignmentType.JUSTIFIED,
-                bullet: tagName === 'li' ? { level: 0 } : undefined
+                bullet: tagName === 'li' ? { level: 0 } : undefined,
+                shading: pBgColor ? { type: ShadingType.CLEAR, fill: pBgColor } : undefined,
             })
         );
       }

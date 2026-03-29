@@ -13,10 +13,16 @@ export interface ProposalInput {
   clientCompanyName: string;
   clientIndustry: string;
   proposalType: string;
+  clientCurrentSituation?: string;
   objective: string;
+  proposalPlan: string;
   referenceContent: string;
   businessCardFile: File | null;
   myCompanyLogoFile: File | null;
+  clientMainImageFile: File | null;
+  monthlyBudget?: string;
+  proposedService?: string;
+  mustIncludeContent?: string;
 }
 
 export interface InfographicData {

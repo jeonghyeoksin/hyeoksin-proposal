@@ -7,7 +7,7 @@ import HeroBanner from './components/HeroBanner';
 import FloatingButtons from './components/FloatingButtons';
 import { ProposalInput, ProposalStep, GeneratedContent } from './types';
 import { generateProposalText, generateInfographicPrompts, generateImage } from './services/geminiService';
-import { createAndDownloadDocx } from './services/docxService';
+import { RefreshCw, RotateCcw } from 'lucide-react';
 
 // Helper for file to base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<ProposalStep>(ProposalStep.IDLE);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [inputData, setInputData] = useState<ProposalInput | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const startGeneration = async (data: ProposalInput) => {
     setInputData(data);
@@ -33,6 +34,24 @@ const App: React.FC = () => {
       // 1. Generate Text
       const rawText = await generateProposalText(data);
       const paragraphs = rawText.split('\n\n').filter(p => p.trim() !== '');
+
+      // Process Business Card if exists
+      let businessCardBase64: string | null = null;
+      if (data.businessCardFile) {
+        businessCardBase64 = await fileToBase64(data.businessCardFile);
+      }
+
+      // Process Logo if exists
+      let logoBase64: string | null = null;
+      if (data.myCompanyLogoFile) {
+        logoBase64 = await fileToBase64(data.myCompanyLogoFile);
+      }
+
+      // Process Client Main Image if exists
+      let clientMainImageBase64: string | null = null;
+      if (data.clientMainImageFile) {
+        clientMainImageBase64 = await fileToBase64(data.clientMainImageFile);
+      }
 
       // 2. Generate Infographics
       setCurrentStep(ProposalStep.GENERATING_INFOGRAPHICS);
@@ -53,20 +72,8 @@ const App: React.FC = () => {
 
       // 3. Generate Cover
       setCurrentStep(ProposalStep.GENERATING_COVER);
-      const coverPrompt = `${data.myCompanyName} providing services to ${data.clientCompanyName}. ${data.proposalType}. ${data.clientIndustry} industry theme. Text on cover: '${data.myCompanyName}', '${data.clientCompanyName}', '${data.proposalType}'`;
-      const coverBase64 = await generateImage(coverPrompt, true);
-
-      // Process Business Card if exists
-      let businessCardBase64: string | null = null;
-      if (data.businessCardFile) {
-        businessCardBase64 = await fileToBase64(data.businessCardFile);
-      }
-
-      // Process Logo if exists
-      let logoBase64: string | null = null;
-      if (data.myCompanyLogoFile) {
-        logoBase64 = await fileToBase64(data.myCompanyLogoFile);
-      }
+      const coverPrompt = `${data.myCompanyName} providing ${data.proposedService || data.proposalType} to ${data.clientCompanyName}. ${data.proposalType}. ${data.clientIndustry} industry theme. Text on cover: '${data.myCompanyName}', '${data.clientCompanyName}', '${data.proposedService || data.proposalType}'`;
+      const coverBase64 = await generateImage(coverPrompt, true, clientMainImageBase64);
 
       // 4. Compile
       setCurrentStep(ProposalStep.COMPILING);
@@ -89,9 +96,90 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
-    if (generatedContent && inputData) {
-      createAndDownloadDocx(generatedContent, `${inputData.clientCompanyName}_제안서`);
+  const regenerateImages = async () => {
+    if (!generatedContent || !inputData) return;
+    
+    setIsRegenerating(true);
+    try {
+      // 1. Regenerate Infographics
+      const infographicPrompts = await generateInfographicPrompts(generatedContent.rawText);
+      const imagePromises = infographicPrompts.slice(0, 3).map(async (prompt, index) => {
+          const b64 = await generateImage(prompt, false);
+          return {
+              id: `info-${index}`,
+              prompt,
+              imageBase64: b64 || "",
+              positionIndex: index
+          };
+      });
+      const infographics = await Promise.all(imagePromises);
+      const validInfographics = infographics.filter(i => i.imageBase64 !== "");
+
+      // 2. Regenerate Cover
+      let clientMainImageBase64: string | null = null;
+      if (inputData.clientMainImageFile) {
+        clientMainImageBase64 = await fileToBase64(inputData.clientMainImageFile);
+      }
+      
+      const coverPrompt = `${inputData.myCompanyName} providing ${inputData.proposedService || inputData.proposalType} to ${inputData.clientCompanyName}. ${inputData.proposalType}. ${inputData.clientIndustry} industry theme. Text on cover: '${inputData.myCompanyName}', '${inputData.clientCompanyName}', '${inputData.proposedService || inputData.proposalType}'`;
+      const coverBase64 = await generateImage(coverPrompt, true, clientMainImageBase64);
+
+      setGeneratedContent(prev => prev ? {
+        ...prev,
+        coverImageBase64: coverBase64,
+        infographics: validInfographics
+      } : null);
+      
+      alert("이미지가 성공적으로 다시 생성되었습니다.");
+    } catch (error) {
+      console.error("Regeneration failed:", error);
+      alert("이미지 다시 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const regenerateCover = async () => {
+    if (!generatedContent || !inputData) return;
+    setIsRegenerating(true);
+    try {
+      let clientMainImageBase64: string | null = null;
+      if (inputData.clientMainImageFile) {
+        clientMainImageBase64 = await fileToBase64(inputData.clientMainImageFile);
+      }
+      const coverPrompt = `${inputData.myCompanyName} providing ${inputData.proposedService || inputData.proposalType} to ${inputData.clientCompanyName}. ${inputData.proposalType}. ${inputData.clientIndustry} industry theme. Text on cover: '${inputData.myCompanyName}', '${inputData.clientCompanyName}', '${inputData.proposedService || inputData.proposalType}'`;
+      const coverBase64 = await generateImage(coverPrompt, true, clientMainImageBase64);
+      setGeneratedContent(prev => prev ? { ...prev, coverImageBase64: coverBase64 } : null);
+    } catch (error) {
+      console.error(error);
+      alert("표지 재생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const regenerateInfographic = async (id: string) => {
+    if (!generatedContent) return;
+    const graphic = generatedContent.infographics.find(g => g.id === id);
+    if (!graphic) return;
+    
+    setIsRegenerating(true);
+    try {
+      const b64 = await generateImage(graphic.prompt, false);
+      if (b64) {
+        setGeneratedContent(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            infographics: prev.infographics.map(g => g.id === id ? { ...g, imageBase64: b64 } : g)
+          };
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      alert("인포그래픽 재생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -134,15 +222,14 @@ const App: React.FC = () => {
             <div>
                  <ProgressVisualizer currentStep={currentStep} />
                  <div className="mt-10">
-                    <Preview content={generatedContent} onDownload={handleDownload} />
-                 </div>
-                 <div className="mt-8 text-center">
-                    <button 
-                      onClick={() => setCurrentStep(ProposalStep.IDLE)}
-                      className="text-slate-500 underline hover:text-indigo-600 text-sm"
-                    >
-                      새로운 제안서 만들기
-                    </button>
+                    <Preview 
+                      content={generatedContent} 
+                      onStartOver={() => setCurrentStep(ProposalStep.IDLE)}
+                      onRegenerateImages={regenerateImages}
+                      onRegenerateCover={regenerateCover}
+                      onRegenerateInfographic={regenerateInfographic}
+                      isRegenerating={isRegenerating}
+                    />
                  </div>
             </div>
         )}

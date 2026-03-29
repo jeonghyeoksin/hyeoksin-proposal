@@ -156,15 +156,15 @@ const Header: React.FC = () => {
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start space-x-3">
                     <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-bold text-slate-800 text-sm mb-1">기본 정보</h4>
-                      <p className="text-xs text-slate-500">회사명, 클라이언트명, 제안 유형 등을 입력합니다.</p>
+                      <h4 className="font-bold text-slate-800 text-sm mb-1">기본 정보 및 기획</h4>
+                      <p className="text-xs text-slate-500">회사명, 제안 유형 입력 후 <strong className="text-indigo-600">AI 기획 생성</strong> 버튼을 눌러 핵심 전략을 수립하세요.</p>
                     </div>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start space-x-3">
                     <ImageIcon className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-bold text-slate-800 text-sm mb-1">시각 자료</h4>
-                      <p className="text-xs text-slate-500">로고나 명함 이미지를 업로드하여 제안서에 포함시킵니다.</p>
+                      <h4 className="font-bold text-slate-800 text-sm mb-1">시각 자료 (선택)</h4>
+                      <p className="text-xs text-slate-500">로고나 명함, 참고 자료를 업로드하여 제안서의 퀄리티를 높이세요.</p>
                     </div>
                   </div>
                 </div>

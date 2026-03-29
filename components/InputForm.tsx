@@ -1,31 +1,88 @@
 import React, { useState } from 'react';
 import { ProposalInput } from '../types';
 import { parseFile } from '../services/fileParser';
-import { FileText, Loader2, Contact, UploadCloud, Sparkles, Wand2, Building2 } from 'lucide-react';
+import { generateProposalPlan } from '../services/geminiService';
+import { FileText, Loader2, Contact, UploadCloud, Sparkles, Wand2, Building2, Lightbulb } from 'lucide-react';
 
 interface Props {
   onSubmit: (data: ProposalInput) => void;
   isLoading: boolean;
 }
 
+const PROPOSAL_TYPES = [
+  "온라인 마케팅 제안서",
+  "사업 제안서",
+  "서비스 제안서",
+  "제품 소개서",
+  "협력/제휴 제안서",
+  "행사/기획 제안서",
+  "기타 (직접 입력)"
+];
+
 const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
   const [formData, setFormData] = useState<ProposalInput>({
     myCompanyName: '',
     clientCompanyName: '',
     clientIndustry: '',
-    proposalType: '',
+    proposalType: PROPOSAL_TYPES[0],
+    clientCurrentSituation: '',
     objective: '',
+    proposalPlan: '',
     referenceContent: '',
     businessCardFile: null,
     myCompanyLogoFile: null,
+    clientMainImageFile: null,
+    monthlyBudget: '',
+    proposedService: '',
+    mustIncludeContent: '',
   });
 
+  const [customProposalType, setCustomProposalType] = useState('');
+  const [isPlanning, setIsPlanning] = useState(false);
   const [isParsingFile, setIsParsingFile] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProposalTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, proposalType: value }));
+  };
+
+  const handlePlanGeneration = async () => {
+    const { myCompanyName, clientCompanyName, clientIndustry, proposalType, clientCurrentSituation, monthlyBudget, proposedService } = formData;
+    const finalType = proposalType === "기타 (직접 입력)" ? customProposalType : proposalType;
+
+    if (!myCompanyName || !clientCompanyName || !clientIndustry || !finalType) {
+      alert("내 업체명, 클라이언트 업체명, 산업 분야, 제안서 종류를 모두 입력해주세요.");
+      return;
+    }
+
+    setIsPlanning(true);
+    try {
+      const result = await generateProposalPlan({
+        myCompanyName,
+        clientCompanyName,
+        clientIndustry,
+        proposalType: finalType,
+        clientCurrentSituation,
+        monthlyBudget,
+        proposedService
+      });
+      setFormData(prev => ({
+        ...prev,
+        objective: result.objective,
+        proposalPlan: result.plan
+      }));
+    } catch (error) {
+      console.error(error);
+      alert("기획안 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsPlanning(false);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,34 +117,40 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
     }
   };
 
+  const handleClientMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, clientMainImageFile: file }));
+    }
+  };
+
   const handleFillExample = () => {
     setFormData(prev => ({
         ...prev,
         myCompanyName: '넥스트 웨이브 솔루션',
         clientCompanyName: '퓨처 리테일',
         clientIndustry: '이커머스 및 유통',
-        proposalType: 'AI 기반 고객 경험 혁신 제안서',
+        proposalType: '사업 제안서',
+        clientCurrentSituation: '기존 오프라인 매장 중심에서 온라인으로 전환 중이나, 낮은 전환율과 높은 이탈률로 인해 성장이 정체된 상황임.',
+        monthlyBudget: '500만원',
+        proposedService: 'AI 기반 개인화 마케팅 자동화 솔루션',
+        mustIncludeContent: '1. 당사만의 독자적인 AI 알고리즘 기술력 강조\n2. 타사 대비 30% 저렴한 유지보수 비용\n3. 24시간 실시간 모니터링 서비스 포함',
         objective: '고객 이탈률 20% 감소 및 재구매율 15% 상승',
+        proposalPlan: '1. AI 챗봇 도입을 통한 상담 자동화\n2. 초개인화 추천 엔진 구축\n3. 구매 여정 최적화 및 간편 결제 도입',
         referenceContent: `[현황 분석]
 현재 퓨처 리테일의 온라인 쇼핑몰은 방문자 수는 많으나, 장바구니 이탈률이 65%에 달함.
 고객 상담 센터의 대기 시간이 평균 10분 이상으로 고객 불만 증가.
-개인화된 추천 시스템의 부재로 인한 교차 판매 기회 상실.
-
-[제안 솔루션]
-1. AI 챗봇 '퓨처봇' 도입: 24시간 실시간 상담 및 단순 문의 80% 자동화.
-2. 초개인화 추천 엔진: 고객 행동 데이터를 분석하여 메인 화면 및 장바구니 페이지에서 맞춤 상품 추천.
-3. 구매 여정 최적화: UX/UI 개편을 통해 결제 단계 축소 및 간편 결제 도입.
-
-[기대 효과]
-- 상담원 업무 부하 50% 감소 및 고부가가치 업무 집중.
-- 개인화 추천을 통한 객단가(AOV) 10% 상승 예상.
-- 고객 만족도(CSAT) 4.5점으로 개선 목표.`
+개인화된 추천 시스템의 부재로 인한 교차 판매 기회 상실.`
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const finalData = {
+      ...formData,
+      proposalType: formData.proposalType === "기타 (직접 입력)" ? customProposalType : formData.proposalType
+    };
+    onSubmit(finalData);
   };
 
   return (
@@ -143,7 +206,7 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 onChange={handleChange}
               />
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">클라이언트 산업 분야</label>
               <input
                 type="text"
@@ -155,22 +218,93 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 onChange={handleChange}
               />
             </div>
-         </div>
-
-         {/* Section 2: Details */}
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">제안서 종류</label>
+              <label className="text-sm font-bold text-slate-700">월 예산 (선택)</label>
               <input
                 type="text"
-                name="proposalType"
-                required
+                name="monthlyBudget"
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
-                placeholder="예: 디지털 마케팅 연간 대행 제안서"
-                value={formData.proposalType}
+                placeholder="예: 500만원, 협의 가능 등"
+                value={formData.monthlyBudget}
                 onChange={handleChange}
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">제안할 서비스 (선택)</label>
+              <input
+                type="text"
+                name="proposedService"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
+                placeholder="예: 인스타그램 광고 대행, 홈페이지 제작 등"
+                value={formData.proposedService}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">제안서 종류</label>
+              <div className="space-y-2">
+                <select
+                  name="proposalType"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm bg-white"
+                  value={formData.proposalType}
+                  onChange={handleProposalTypeChange}
+                >
+                  {PROPOSAL_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                {formData.proposalType === "기타 (직접 입력)" && (
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
+                    placeholder="제안서 종류를 직접 입력하세요"
+                    value={customProposalType}
+                    onChange={(e) => setCustomProposalType(e.target.value)}
+                    required
+                  />
+                )}
+              </div>
+            </div>
+         </div>
+
+         <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">클라이언트 현재 상황 (선택)</label>
+            <textarea
+              name="clientCurrentSituation"
+              rows={3}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm text-sm"
+              placeholder="클라이언트가 현재 겪고 있는 문제점이나 상황을 입력하면 더 정확한 기획이 가능합니다."
+              value={formData.clientCurrentSituation}
+              onChange={handleChange}
+            />
+         </div>
+
+         <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">꼭 작성해야 될 내용 (선택)</label>
+            <textarea
+              name="mustIncludeContent"
+              rows={3}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm text-sm"
+              placeholder="제안서에 반드시 포함되어야 하는 핵심 강점이나 필수 요구사항을 입력하세요."
+              value={formData.mustIncludeContent}
+              onChange={handleChange}
+            />
+         </div>
+
+         <div className="flex justify-center py-2">
+            <button
+              type="button"
+              onClick={handlePlanGeneration}
+              disabled={isPlanning || isLoading}
+              className="flex items-center px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-200 disabled:bg-slate-400"
+            >
+              {isPlanning ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Lightbulb className="w-5 h-5 mr-2" />}
+              핵심 목표 및 제안서 기획 생성 (AI)
+            </button>
+         </div>
+
+         {/* Section 2: Details */}
+         <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">핵심 목표 (Objective)</label>
               <input
@@ -178,8 +312,20 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 name="objective"
                 required
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
-                placeholder="예: 매출 200% 증대"
+                placeholder="예: 3개월 내 매출 300% 성장을 위한 초격차 마케팅 전략"
                 value={formData.objective}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">제안서 기획 (Plan)</label>
+              <textarea
+                name="proposalPlan"
+                rows={4}
+                required
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm text-sm"
+                placeholder="제안서의 목차나 핵심 전략을 입력하세요. (위 버튼을 클릭하여 AI가 자동으로 기획하게 할 수 있습니다)"
+                value={formData.proposalPlan}
                 onChange={handleChange}
               />
             </div>
@@ -190,8 +336,8 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
          {/* Section 3: Files */}
          <div className="space-y-2">
             <label className="flex items-center text-sm font-bold text-slate-700">
-                참고 자료 (필수)
-                <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">AI가 100% 반영합니다</span>
+                참고 자료 (선택)
+                <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">AI가 참고하여 작성합니다</span>
             </label>
             <div className="space-y-3">
                 <div className="relative group">
@@ -217,9 +363,9 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 )}
                 <textarea
                 name="referenceContent"
-                rows={8}
+                rows={6}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition disabled:bg-slate-50 text-sm"
-                placeholder="파일 내용을 자동으로 불러오거나, 이곳에 직접 제안서에 들어갈 핵심 내용을 붙여넣으세요. (이 내용을 바탕으로 제안서가 작성됩니다)"
+                placeholder="파일 내용을 자동으로 불러오거나, 이곳에 직접 제안서에 들어갈 핵심 내용을 붙여넣으세요. (선택 사항)"
                 value={formData.referenceContent}
                 onChange={handleChange}
                 disabled={isParsingFile}
@@ -227,7 +373,7 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">내 업체 로고 (선택)</label>
                 <div className="relative border border-slate-200 rounded-lg p-3 flex items-center bg-slate-50 hover:bg-white transition h-[72px]">
@@ -243,11 +389,37 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                             <Building2 className="w-5 h-5 text-slate-400" />
                         </div>
                         <div className="flex-1">
-                             <div className="text-sm font-medium text-slate-700">
+                             <div className="text-sm font-medium text-slate-700 truncate">
                                  {formData.myCompanyLogoFile ? formData.myCompanyLogoFile.name : "로고 이미지 업로드"}
                              </div>
                              <div className="text-xs text-slate-500 truncate">
                                  {formData.myCompanyLogoFile ? "표지 상단에 삽입됩니다." : "클릭하여 선택"}
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">클라이언트 메인 이미지 (선택)</label>
+                <div className="relative border border-slate-200 rounded-lg p-3 flex items-center bg-slate-50 hover:bg-white transition h-[72px]">
+                    <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleClientMainImageChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={isLoading}
+                    />
+                    <div className="flex items-center w-full">
+                        <div className="w-10 h-10 bg-white rounded border border-slate-200 flex items-center justify-center mr-3">
+                            <UploadCloud className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <div className="flex-1">
+                             <div className="text-sm font-medium text-slate-700 truncate">
+                                 {formData.clientMainImageFile ? formData.clientMainImageFile.name : "메인 이미지 업로드"}
+                             </div>
+                             <div className="text-xs text-slate-500 truncate">
+                                 {formData.clientMainImageFile ? "제안서 표지에 사용됩니다." : "클릭하여 선택"}
                              </div>
                         </div>
                     </div>
@@ -269,7 +441,7 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                             <Contact className="w-5 h-5 text-slate-400" />
                         </div>
                         <div className="flex-1">
-                             <div className="text-sm font-medium text-slate-700">
+                             <div className="text-sm font-medium text-slate-700 truncate">
                                  {formData.businessCardFile ? formData.businessCardFile.name : "명함 이미지 업로드"}
                              </div>
                              <div className="text-xs text-slate-500 truncate">
@@ -285,9 +457,9 @@ const InputForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
       <div className="pt-6 border-t border-slate-100">
         <button
             type="submit"
-            disabled={isLoading || isParsingFile}
+            disabled={isLoading || isParsingFile || isPlanning}
             className={`w-full flex items-center justify-center px-8 py-4 rounded-xl text-white font-bold text-lg shadow-xl transition transform hover:-translate-y-1 active:scale-95 ${
-            (isLoading || isParsingFile) ? 'bg-slate-400 cursor-not-allowed shadow-none' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-indigo-500/30'
+            (isLoading || isParsingFile || isPlanning) ? 'bg-slate-400 cursor-not-allowed shadow-none' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-indigo-500/30'
             }`}
         >
             {isLoading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : null}
